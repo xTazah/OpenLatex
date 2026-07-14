@@ -73,6 +73,11 @@ The fork completely rearchitected the project into a **local-first, filesystem-b
 - **Pull / Push** — One-click buttons (shown when a remote is configured)
 - **Live refresh** — Git status updates on every file change (debounced 1s) and polls every 3s for external git operations (`git reset`, `git stash`, etc.)
 
+### GitHub Integration
+- **Sign in via the GitHub CLI** — Uses `gh`'s own device-flow login (shows a code, opens the verification URL, waits for authorization) rather than a custom OAuth app, so OpenLaTex never touches a client secret or token itself
+- **Publish to GitHub** — Turn a local-only project with no remote into a new GitHub repository in one step (requires at least one commit first — no auto-commit)
+- **Open on GitHub** — One click to open the current repo's GitHub page once a remote exists
+
 ### Filesystem Sync
 - **Disk is source of truth** — The editor never holds state that isn't on disk
 - **Chokidar file watcher** — SSE stream pushes `add` / `change` / `unlink` events to the browser in real-time
@@ -141,7 +146,11 @@ Next.js Server (apps/web)
   ├── /api/git/unstage  — git restore --staged
   ├── /api/git/commit   — git commit -m
   ├── /api/git/pull     — git pull
-  └── /api/git/push     — git push
+  ├── /api/git/push     — git push
+  ├── /api/gh/status    — GitHub CLI auth status
+  ├── /api/gh/login     — Device-flow sign-in via `gh`
+  ├── /api/gh/logout    — Sign out
+  └── /api/gh/publish   — Create a GitHub repo and push the current project
         │
         │  POST /builds/sync
         ▼
@@ -161,12 +170,12 @@ latex-api (apps/latex-api, Hono) — unchanged
 OpenLaTex/
 ├── apps/
 │   ├── web/                    # Next.js 16 frontend + API routes
-│   │   ├── app/api/            # FS, Git, Compile, PDF API routes
+│   │   ├── app/api/            # FS, Git, GitHub, Compile, PDF API routes
 │   │   ├── components/         # UI (sidebar, editor, preview, shadcn/ui)
 │   │   ├── hooks/              # use-fs-startup, use-keyboard-shortcuts
 │   │   ├── lib/fs/             # Sandbox, echo suppression, watcher, clients
-│   │   ├── lib/git/            # Git runner (server), Git client (browser)
-│   │   ├── stores/             # Zustand: fs-store, editor-store, pdf-store, git-store
+│   │   ├── lib/git/            # Git runner (server), GitHub CLI wrapper, Git client (browser)
+│   │   ├── stores/             # Zustand: fs-store, editor-store, pdf-store, git-store, github-store
 │   │   └── styles/             # Tailwind CSS v4
 │   └── latex-api/              # Hono API — spawns pdflatex (unchanged from fork)
 ├── docs/                       # Design specs, plans, manual test plan
