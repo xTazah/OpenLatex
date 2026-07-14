@@ -8,6 +8,7 @@
 - pnpm 10+
 - Git (for git integration features)
 - TeX Live **or** Docker (for the latex-api compiler service)
+- [GitHub CLI](https://cli.github.com) (`gh`) — optional, only needed for GitHub sign-in/publish
 
 ### Setup
 
@@ -69,6 +70,7 @@ apps/web/
 ├── app/api/              # Next.js API routes
 │   ├── fs/               #   File operations (list, read, write, watch SSE)
 │   ├── git/              #   Git operations (info, status, stage, unstage, commit, pull, push)
+│   ├── gh/               #   GitHub CLI integration (auth status, login, logout, publish)
 │   ├── compile/          #   LaTeX compilation (reads from disk, proxies to latex-api)
 │   ├── pdf/cached/       #   Serves cached PDF if still fresh
 │   └── project/          #   Project picker API (current, set, browse)
@@ -76,15 +78,15 @@ apps/web/
 │   ├── ui/               #   shadcn/ui primitives (button, dialog, tooltip, etc.)
 │   ├── project/          #     Welcome screen, directory browser, project switcher
 │   └── workspace/        #   App-specific components
-│       ├── sidebar/      #     File tree, Source Control panel, Table of Contents
+│       ├── sidebar/      #     File tree, Source Control panel, Table of Contents, GitHub account menu
 │       ├── editor/       #     CodeMirror editor, toolbar, search, image preview
 │       └── preview/      #     PDF viewer with zoom, scroll sync, error log
 ├── hooks/                #   use-fs-startup, use-keyboard-shortcuts, use-current-project
 ├── lib/
 │   ├── fs/               #   Sandbox, echo suppression, watcher, project-dir, clients
-│   ├── git/              #   Git runner (server-side execFile), Git client (browser fetch)
+│   ├── git/              #   Git runner (server-side execFile), GitHub CLI wrapper, Git client (browser fetch)
 │   └── project/          #   Config module (~/openlatex/config.json), path utils
-├── stores/               #   Zustand stores: fs, editor, pdf, git
+├── stores/               #   Zustand stores: fs, editor, pdf, git, github
 └── styles/               #   Tailwind CSS v4 globals
 ```
 
@@ -94,7 +96,7 @@ apps/web/
 - **Path sandboxing.** Every filesystem route validates paths via `resolveInProject()` from `lib/fs/sandbox.ts`. Always use it for any new FS route.
 - **Echo suppression.** When the server writes a file, it records the write so the chokidar watcher can drop the resulting event. See `lib/fs/echo-suppression.ts`.
 - **No shell injection.** Git commands use `execFile` (args as array). Never use `exec` or template strings for command construction.
-- **Zustand for state.** Four stores: `fs-store` (file tree), `editor-store` (active file + buffer), `pdf-store` (PDF bytes + compile status), `git-store` (branch, statuses, actions).
+- **Zustand for state.** Five stores: `fs-store` (file tree), `editor-store` (active file + buffer), `pdf-store` (PDF bytes + compile status), `git-store` (branch, statuses, actions), `github-store` (GitHub CLI auth state).
 
 ### Testing
 
@@ -107,6 +109,7 @@ pnpm test:watch    # Watch mode
 Unit tests cover the security-critical modules:
 - `lib/fs/sandbox.test.ts` — Path resolution and traversal rejection
 - `lib/fs/echo-suppression.test.ts` — Write-echo tracking with fake timers
+- `lib/git/git-remote-url.test.ts` — GitHub remote URL parsing (SSH/HTTPS forms)
 
 A manual test checklist lives at `docs/manual-test-plan.md`.
 
