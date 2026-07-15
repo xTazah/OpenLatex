@@ -31,7 +31,7 @@ function statusLabel(status: GitFileStatus): string {
     case "deleted":
       return "D";
     case "untracked":
-      return "?";
+      return "U";
     case "renamed":
       return "R";
     case "conflicted":
