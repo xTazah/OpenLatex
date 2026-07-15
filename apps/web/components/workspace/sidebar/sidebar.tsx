@@ -11,6 +11,8 @@ import {
   GithubIcon,
   GitBranchIcon,
   ChevronDownIcon,
+  EyeIcon,
+  EyeOffIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -84,6 +86,7 @@ export function Sidebar() {
   const scPanelRef = useRef<ImperativePanelHandle>(null);
   const outlinePanelRef = useRef<ImperativePanelHandle>(null);
   const [filesCollapsed, setFilesCollapsed] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const [scCollapsed, setScCollapsed] = useState(false);
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
 
@@ -145,23 +148,39 @@ export function Sidebar() {
       </div>
 
       {/* Files header */}
-      <button
-        onClick={() =>
-          filesCollapsed
-            ? filesPanelRef.current?.expand()
-            : filesPanelRef.current?.collapse()
-        }
-        className="flex h-9 w-full cursor-pointer items-center gap-2 border-sidebar-border border-b px-3 transition-colors hover:bg-sidebar-accent/50"
-      >
-        <ChevronDownIcon
-          className={cn(
-            "size-3.5 text-muted-foreground transition-transform",
-            filesCollapsed && "-rotate-90",
+      <div className="flex h-9 w-full items-center border-sidebar-border border-b px-3">
+        <button
+          onClick={() =>
+            filesCollapsed
+              ? filesPanelRef.current?.expand()
+              : filesPanelRef.current?.collapse()
+          }
+          className="flex flex-1 cursor-pointer items-center gap-2 py-2 text-left transition-colors hover:bg-sidebar-accent/50"
+        >
+          <ChevronDownIcon
+            className={cn(
+              "size-3.5 text-muted-foreground transition-transform",
+              filesCollapsed && "-rotate-90",
+            )}
+          />
+          <FolderIcon className="size-4 text-muted-foreground" />
+          <span className="font-medium text-xs">Files</span>
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowHidden((v) => !v);
+          }}
+          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-sidebar-accent/50 hover:text-foreground"
+          title={showHidden ? "Hide hidden files" : "Show hidden files"}
+        >
+          {showHidden ? (
+            <EyeIcon className="size-3.5" />
+          ) : (
+            <EyeOffIcon className="size-3.5" />
           )}
-        />
-        <FolderIcon className="size-4 text-muted-foreground" />
-        <span className="font-medium text-xs">Files</span>
-      </button>
+        </button>
+      </div>
 
       <PanelGroup direction="vertical" className="min-h-0 flex-1">
         <Panel
@@ -179,6 +198,7 @@ export function Sidebar() {
               activePath={activePath}
               onOpen={openFile}
               fileStatuses={fileStatuses}
+              showHidden={showHidden}
             />
           </div>
         </Panel>

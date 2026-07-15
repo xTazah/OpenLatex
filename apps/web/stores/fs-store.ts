@@ -26,25 +26,41 @@ export function flattenFiles(tree: FsNode[]): string[] {
   return out;
 }
 
+function sortNodes(nodes: FsNode[]): FsNode[] {
+  return [...nodes].sort((a, b) => {
+    if (a.type !== b.type) return a.type === "dir" ? -1 : 1;
+    return a.path.localeCompare(b.path);
+  });
+}
+
 function addNodeToTree(tree: FsNode[], newNode: FsNode): FsNode[] {
   const segments = newNode.path.split("/");
   if (segments.length === 1) {
     if (tree.some((n) => n.path === newNode.path)) return tree;
-    return [...tree, newNode].sort((a, b) => {
-      if (a.type !== b.type) return a.type === "dir" ? -1 : 1;
-      return a.path.localeCompare(b.path);
-    });
+    return sortNodes([...tree, newNode]);
   }
 
-  const [firstSegment, ...rest] = segments;
-  const parentPath = firstSegment;
+  const parentPath = segments.slice(0, -1).join("/");
+  return insertUnderParent(tree, parentPath, newNode);
+}
+
+/** Find the dir node at `parentPath` (however deep) and append `newNode` to its children. */
+function insertUnderParent(
+  tree: FsNode[],
+  parentPath: string,
+  newNode: FsNode,
+): FsNode[] {
   return tree.map((node) => {
     if (node.path === parentPath && node.type === "dir") {
-      const updatedChildren = addNodeToTree(node.children ?? [], {
-        ...newNode,
-        path: rest.join("/") === "" ? newNode.path : newNode.path,
-      });
-      return { ...node, children: updatedChildren };
+      const children = node.children ?? [];
+      if (children.some((c) => c.path === newNode.path)) return node;
+      return { ...node, children: sortNodes([...children, newNode]) };
+    }
+    if (node.type === "dir" && parentPath.startsWith(`${node.path}/`)) {
+      return {
+        ...node,
+        children: insertUnderParent(node.children ?? [], parentPath, newNode),
+      };
     }
     return node;
   });

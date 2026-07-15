@@ -16,6 +16,23 @@ interface FileTreeProps {
   activePath: string | null;
   onOpen: (path: string) => void;
   fileStatuses?: Map<string, GitFileStatus>;
+  showHidden?: boolean;
+}
+
+function isHidden(node: FsNode): boolean {
+  const name = node.path.split("/").pop() ?? node.path;
+  return name.startsWith(".");
+}
+
+/** Recursively drop dotfiles/dot-directories (e.g. .venv) from the tree. */
+function withoutHidden(nodes: FsNode[]): FsNode[] {
+  return nodes
+    .filter((node) => !isHidden(node))
+    .map((node) =>
+      node.type === "dir" && node.children
+        ? { ...node, children: withoutHidden(node.children) }
+        : node,
+    );
 }
 
 function gitStatusColor(status: GitFileStatus | undefined): string {
@@ -46,7 +63,7 @@ function gitStatusBadge(status: GitFileStatus | undefined): string | null {
     case "staged":
       return "A";
     case "untracked":
-      return "?";
+      return "U";
     case "deleted":
     case "staged-deleted":
       return "D";
@@ -101,10 +118,12 @@ export function FileTree({
   activePath,
   onOpen,
   fileStatuses,
+  showHidden = false,
 }: FileTreeProps) {
+  const visibleNodes = showHidden ? nodes : withoutHidden(nodes);
   return (
     <ul className="space-y-0.5">
-      {nodes.map((node) => (
+      {visibleNodes.map((node) => (
         <TreeNode
           key={node.path}
           node={node}
