@@ -132,14 +132,11 @@ export async function POST() {
     // require a recompile, same as before.
     if (buildId) {
       try {
-        const sxRes = await fetch(
-          `${latexApiUrl}/builds/${buildId}/synctex`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ targetDir: buildDir }),
-          },
-        );
+        const sxRes = await fetch(`${latexApiUrl}/builds/${buildId}/synctex`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetDir: buildDir }),
+        });
         if (sxRes.ok) {
           const gzBuffer = Buffer.from(await sxRes.arrayBuffer());
           const gzPath = path.join(buildDir, "out.synctex.gz");
