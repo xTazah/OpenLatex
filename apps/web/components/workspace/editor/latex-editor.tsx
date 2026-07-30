@@ -29,6 +29,8 @@ import {
   setSearchQuery as setSearchQueryEffect,
   findNext,
   findPrevious,
+  replaceNext,
+  replaceAll,
 } from "@codemirror/search";
 import { latex } from "codemirror-lang-latex";
 import { useEditorStore } from "@/stores/editor-store";
@@ -257,6 +259,8 @@ export function LatexEditor() {
   const [searchQuery, setSearchQuery] = useState("");
   const [matchCount, setMatchCount] = useState(0);
   const [currentMatch, setCurrentMatch] = useState(0);
+  const [isReplaceOpen, setIsReplaceOpen] = useState(false);
+  const [replaceQuery, setReplaceQuery] = useState("");
 
   const parsedLines = useMemo(() => parseLatexStructure(buffer), [buffer]);
   const stickyLines = useMemo(() => {
@@ -292,23 +296,47 @@ export function LatexEditor() {
       if ((e.metaKey || e.ctrlKey) && e.key === "f") {
         e.preventDefault();
         setIsSearchOpen(true);
+      } else if (e.ctrlKey && e.key === "h") {
+        // Ctrl+H specifically (not Cmd+H, which macOS reserves for "Hide app").
+        e.preventDefault();
+        setIsSearchOpen(true);
+        setIsReplaceOpen(true);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Rebuilds the CodeMirror search query and jumps to the next match whenever
+  // the search text itself changes.
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
     const query = new SearchQuery({
       search: searchQuery,
+      replace: replaceQuery,
       caseSensitive: false,
       literal: true,
     });
     view.dispatch({ effects: setSearchQueryEffect.of(query) });
     if (searchQuery) findNext(view);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
+
+  // Keeps the query's replace text current without re-triggering find-next —
+  // typing a replacement shouldn't yank the selection to another match.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const query = new SearchQuery({
+      search: searchQuery,
+      replace: replaceQuery,
+      caseSensitive: false,
+      literal: true,
+    });
+    view.dispatch({ effects: setSearchQueryEffect.of(query) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replaceQuery]);
 
   const handleFindNext = () => {
     const view = viewRef.current;
@@ -321,6 +349,22 @@ export function LatexEditor() {
     if (!view) return;
     findPrevious(view);
     view.focus();
+  };
+  const handleReplaceOne = () => {
+    const view = viewRef.current;
+    if (!view) return;
+    replaceNext(view);
+    view.focus();
+  };
+  const handleReplaceAll = () => {
+    const view = viewRef.current;
+    if (!view) return;
+    const count = matchCount;
+    replaceAll(view);
+    view.focus();
+    if (count > 0) {
+      toast(`Replaced ${count} occurrence${count === 1 ? "" : "s"}`);
+    }
   };
 
   useEffect(() => {
@@ -409,10 +453,19 @@ export function LatexEditor() {
           },
         },
         {
+          key: "Ctrl-h",
+          run: () => {
+            setIsSearchOpen(true);
+            setIsReplaceOpen(true);
+            return true;
+          },
+        },
+        {
           key: "Escape",
           run: () => {
             if (isSearchOpenRef.current) {
               setIsSearchOpen(false);
+              setIsReplaceOpen(false);
               return true;
             }
             return false;
@@ -584,13 +637,21 @@ export function LatexEditor() {
           onSearchQueryChange={setSearchQuery}
           onClose={() => {
             setIsSearchOpen(false);
+            setIsReplaceOpen(false);
             setSearchQuery("");
+            setReplaceQuery("");
             viewRef.current?.focus();
           }}
           onFindNext={handleFindNext}
           onFindPrevious={handleFindPrevious}
           matchCount={matchCount}
           currentMatch={currentMatch}
+          showReplace={isReplaceOpen}
+          onToggleReplace={() => setIsReplaceOpen((v) => !v)}
+          replaceQuery={replaceQuery}
+          onReplaceQueryChange={setReplaceQuery}
+          onReplaceOne={handleReplaceOne}
+          onReplaceAll={handleReplaceAll}
         />
       )}
       <div className="relative min-h-0 flex-1 overflow-hidden">
